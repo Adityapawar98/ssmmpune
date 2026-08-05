@@ -14,16 +14,162 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      donations: {
+        Row: {
+          amount: number
+          collected_by: string
+          collected_by_name: string
+          created_at: string
+          donor_name: string
+          donor_phone: string | null
+          id: string
+          lane: string
+          note: string | null
+          paid_at: string | null
+          receipt_no: number
+          status: string
+          upi_ref: string | null
+        }
+        Insert: {
+          amount: number
+          collected_by: string
+          collected_by_name?: string
+          created_at?: string
+          donor_name: string
+          donor_phone?: string | null
+          id?: string
+          lane: string
+          note?: string | null
+          paid_at?: string | null
+          receipt_no?: number
+          status?: string
+          upi_ref?: string | null
+        }
+        Update: {
+          amount?: number
+          collected_by?: string
+          collected_by_name?: string
+          created_at?: string
+          donor_name?: string
+          donor_phone?: string | null
+          id?: string
+          lane?: string
+          note?: string | null
+          paid_at?: string | null
+          receipt_no?: number
+          status?: string
+          upi_ref?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      receipt_settings: {
+        Row: {
+          address: string
+          contact: string
+          footer_text: string
+          header_text: string
+          id: boolean
+          logo_url: string | null
+          mandal_name: string
+          paper_width: string
+          show_collector: boolean
+          show_lane: boolean
+          show_phone: boolean
+          show_upi_ref: boolean
+          updated_at: string
+          upi_id: string
+        }
+        Insert: {
+          address?: string
+          contact?: string
+          footer_text?: string
+          header_text?: string
+          id?: boolean
+          logo_url?: string | null
+          mandal_name?: string
+          paper_width?: string
+          show_collector?: boolean
+          show_lane?: boolean
+          show_phone?: boolean
+          show_upi_ref?: boolean
+          updated_at?: string
+          upi_id?: string
+        }
+        Update: {
+          address?: string
+          contact?: string
+          footer_text?: string
+          header_text?: string
+          id?: boolean
+          logo_url?: string | null
+          mandal_name?: string
+          paper_width?: string
+          show_collector?: boolean
+          show_lane?: boolean
+          show_phone?: boolean
+          show_upi_ref?: boolean
+          updated_at?: string
+          upi_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +296,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
