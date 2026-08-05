@@ -71,7 +71,7 @@ function DashboardPage() {
           note: note.trim() || null,
           status,
           collected_by: user!.id,
-          collected_by_name: profile?.full_name ?? user!.email ?? null,
+          collected_by_name: profile?.full_name ?? user!.email ?? undefined,
         })
         .select()
         .single();
