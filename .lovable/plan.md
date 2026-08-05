@@ -54,6 +54,8 @@ Festive but clean: deep saffron and marigold accents on warm cream, with a subtl
 - Bar chart via `recharts`, one `BarChart` with 12 categories.
 - Auth: email/password, roles in a separate `user_roles` table checked through a security-definer function; protected routes live under an authenticated layout.
 
-## What I need from you
+## Details provided
 
-The mandal's **UPI ID** (e.g. `adityapawar8552@okaxis`) and display name to seed the receipt settings — you can also enter them on the settings page after login. Tell me the first admin's email and I'll note it, but you'll create the account yourself on the login screen.
+- **Mandal display name:** Shantinagar Sarvajanik Mitra Mandal (seeded into receipt settings)
+- **UPI ID:** `adityapawar8552@okaxis` (editable later on the settings page)
+- **First admin account:** ssmmpune1983@gmail.com — sign up with this email on the login screen using the password you chose, and it will be granted the admin role. I won't store the password anywhere in the code.
