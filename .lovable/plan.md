@@ -56,4 +56,4 @@ Festive but clean: deep saffron and marigold accents on warm cream, with a subtl
 
 ## What I need from you
 
-The mandal's **UPI ID** (e.g. `mandal@okaxis`) and display name to seed the receipt settings — you can also enter them on the settings page after login. Tell me the first admin's email and I'll note it, but you'll create the account yourself on the login screen.
+The mandal's **UPI ID** (e.g. `adityapawar8552@okaxis`) and display name to seed the receipt settings — you can also enter them on the settings page after login. Tell me the first admin's email and I'll note it, but you'll create the account yourself on the login screen.
