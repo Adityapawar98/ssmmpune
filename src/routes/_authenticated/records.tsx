@@ -11,7 +11,7 @@ import { useReceiptSettings } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime, formatINR, LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadLedgerPdf, downloadReceiptPdf } from "@/lib/pdf";
-import type { Donation } from "@/lib/receipt";
+import { buildWhatsappLink, type Donation } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_authenticated/records")({
   head: () => ({
