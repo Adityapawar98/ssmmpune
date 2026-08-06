@@ -71,6 +71,7 @@ function DashboardPage() {
           amount: numericAmount,
           note: note.trim() || null,
           status,
+          payment_mode: mode,
           collected_by: user!.id,
           collected_by_name: profile?.full_name ?? user!.email ?? "",
         })
