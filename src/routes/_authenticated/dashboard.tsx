@@ -16,7 +16,7 @@ import { useProfile, useReceiptSettings, useSessionUser } from "@/hooks/useAuthU
 import { supabase } from "@/integrations/supabase/client";
 import { LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadReceiptPdf } from "@/lib/pdf";
-import { buildReceiptLines, buildUpiUri, type Donation } from "@/lib/receipt";
+import { buildReceiptLines, buildUpiUri, buildWhatsappLink, type Donation } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
