@@ -230,7 +230,13 @@ function DashboardPage() {
         </Card>
 
         <div className="space-y-6">
-          {validAmount && settings && upiUri ? (
+          {mode === "cash" ? (
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center text-sm text-muted-foreground">
+                Cash mode — no QR needed. Collect the cash and save the receipt.
+              </CardContent>
+            </Card>
+          ) : validAmount && settings && upiUri ? (
             <UpiQr uri={upiUri} amount={numericAmount} upiId={settings.upi_id} />
           ) : (
             <Card className="border-dashed">
@@ -244,7 +250,9 @@ function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="font-display text-xl">Receipt #{saved.receipt_no}</CardTitle>
-                <CardDescription>Preview of exactly what will print.</CardDescription>
+                <CardDescription>
+                  {saved.txn_id ? `Txn ${saved.txn_id} · ` : ""}Preview of exactly what will print.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-[11px] leading-tight">
@@ -260,7 +268,19 @@ function DashboardPage() {
                   <Button variant="outline" onClick={() => downloadReceiptPdf(saved, settings)}>
                     <Download className="size-4" /> Receipt PDF
                   </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!waLink}
+                    onClick={() => waLink && window.open(waLink, "_blank", "noopener")}
+                  >
+                    <MessageCircle className="size-4" /> Send on WhatsApp
+                  </Button>
                 </div>
+                {!waLink ? (
+                  <p className="text-xs text-muted-foreground">
+                    Add the donor&apos;s mobile number to send the receipt on WhatsApp.
+                  </p>
+                ) : null}
                 {!connection ? (
                   <p className="text-xs text-muted-foreground">
                     Connect a Bluetooth or USB thermal printer above to print directly.
