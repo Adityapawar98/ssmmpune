@@ -29,6 +29,7 @@ function RecordsPage() {
   const { data: settings } = useReceiptSettings();
   const [search, setSearch] = useState("");
   const [lane, setLane] = useState("all");
+  const [mode, setMode] = useState("all");
 
   const { data: donations = [], isLoading } = useQuery({
     queryKey: ["donations"],
@@ -44,12 +45,14 @@ function RecordsPage() {
     return donations.filter(
       (d) =>
         (lane === "all" || d.lane === lane) &&
+        (mode === "all" || d.payment_mode === mode) &&
         (!q ||
           d.donor_name.toLowerCase().includes(q) ||
           String(d.receipt_no).includes(q) ||
+          (d.txn_id ?? "").toLowerCase().includes(q) ||
           (d.donor_phone ?? "").includes(q)),
     );
-  }, [donations, search, lane]);
+  }, [donations, search, lane, mode]);
 
   const total = filtered.reduce((s, d) => s + Number(d.amount), 0);
 
@@ -67,7 +70,7 @@ function RecordsPage() {
           onClick={() =>
             settings &&
             downloadLedgerPdf(filtered, settings, {
-              rangeLabel: lane === "all" ? "All lanes" : lane,
+              rangeLabel: `${lane === "all" ? "All lanes" : lane} · ${mode === "all" ? "All modes" : mode === "cash" ? "Cash" : "Online"}`,
             })
           }
         >
@@ -77,7 +80,7 @@ function RecordsPage() {
 
       <div className="flex flex-wrap gap-3">
         <Input
-          placeholder="Search donor, phone or receipt no."
+          placeholder="Search donor, phone, receipt or txn ID"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-11 max-w-xs"
@@ -95,7 +98,18 @@ function RecordsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={mode} onValueChange={setMode}>
+          <SelectTrigger className="!h-11 w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All modes</SelectItem>
+            <SelectItem value="online">Online (UPI)</SelectItem>
+            <SelectItem value="cash">Cash</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
 
       <Card>
         <CardHeader>
