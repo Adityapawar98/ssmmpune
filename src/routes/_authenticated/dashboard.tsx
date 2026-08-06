@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Download, Printer, RotateCcw } from "lucide-react";
+import { Banknote, Check, Download, MessageCircle, Printer, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrinterBar, useThermalPrinter } from "@/components/PrinterBar";
