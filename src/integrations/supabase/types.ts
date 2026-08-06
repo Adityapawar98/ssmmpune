@@ -26,8 +26,10 @@ export type Database = {
           lane: string
           note: string | null
           paid_at: string | null
+          payment_mode: string
           receipt_no: number
           status: string
+          txn_id: string | null
           upi_ref: string | null
         }
         Insert: {
@@ -41,8 +43,10 @@ export type Database = {
           lane: string
           note?: string | null
           paid_at?: string | null
+          payment_mode?: string
           receipt_no?: number
           status?: string
+          txn_id?: string | null
           upi_ref?: string | null
         }
         Update: {
@@ -56,8 +60,10 @@ export type Database = {
           lane?: string
           note?: string | null
           paid_at?: string | null
+          payment_mode?: string
           receipt_no?: number
           status?: string
+          txn_id?: string | null
           upi_ref?: string | null
         }
         Relationships: []

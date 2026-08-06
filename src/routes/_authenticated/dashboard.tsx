@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Download, Printer, RotateCcw } from "lucide-react";
+import { Banknote, Check, Download, MessageCircle, Printer, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrinterBar, useThermalPrinter } from "@/components/PrinterBar";
@@ -16,7 +16,7 @@ import { useProfile, useReceiptSettings, useSessionUser } from "@/hooks/useAuthU
 import { supabase } from "@/integrations/supabase/client";
 import { LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadReceiptPdf } from "@/lib/pdf";
-import { buildReceiptLines, buildUpiUri, type Donation } from "@/lib/receipt";
+import { buildReceiptLines, buildUpiUri, buildWhatsappLink, type Donation } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -44,20 +44,21 @@ function DashboardPage() {
   const [lane, setLane] = useState<string>(LANES[0]);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [mode, setMode] = useState<"online" | "cash">("online");
   const [saved, setSaved] = useState<Donation | null>(null);
 
   const numericAmount = Number(amount);
   const validAmount = Number.isFinite(numericAmount) && numericAmount > 0;
 
   const upiUri = useMemo(() => {
-    if (!settings || !validAmount) return "";
+    if (!settings || !validAmount || mode === "cash") return "";
     return buildUpiUri({
       upiId: settings.upi_id,
       payeeName: settings.mandal_name,
       amount: numericAmount,
       note: note || `Ganesh Utsav ${lane}`,
     });
-  }, [settings, validAmount, numericAmount, note, lane]);
+  }, [settings, validAmount, numericAmount, note, lane, mode]);
 
   const createDonation = useMutation({
     mutationFn: async (status: "paid" | "pending") => {
@@ -70,6 +71,7 @@ function DashboardPage() {
           amount: numericAmount,
           note: note.trim() || null,
           status,
+          payment_mode: mode,
           collected_by: user!.id,
           collected_by_name: profile?.full_name ?? user!.email ?? "",
         })
@@ -87,6 +89,7 @@ function DashboardPage() {
   });
 
   const receiptLines = saved && settings ? buildReceiptLines(saved, settings) : [];
+  const waLink = saved && settings ? buildWhatsappLink(saved, settings) : null;
 
   async function handleThermalPrint() {
     if (!receiptLines.length) return;
@@ -124,6 +127,27 @@ function DashboardPage() {
             <CardDescription>The QR amount always matches what you enter here.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Payment mode</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={mode === "online" ? "default" : "outline"}
+                  className="h-12"
+                  onClick={() => setMode("online")}
+                >
+                  <Smartphone className="size-4" /> Online (UPI)
+                </Button>
+                <Button
+                  type="button"
+                  variant={mode === "cash" ? "default" : "outline"}
+                  className="h-12"
+                  onClick={() => setMode("cash")}
+                >
+                  <Banknote className="size-4" /> Cash
+                </Button>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="donor">Donor name</Label>
               <Input
@@ -207,7 +231,13 @@ function DashboardPage() {
         </Card>
 
         <div className="space-y-6">
-          {validAmount && settings && upiUri ? (
+          {mode === "cash" ? (
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center text-sm text-muted-foreground">
+                Cash mode — no QR needed. Collect the cash and save the receipt.
+              </CardContent>
+            </Card>
+          ) : validAmount && settings && upiUri ? (
             <UpiQr uri={upiUri} amount={numericAmount} upiId={settings.upi_id} />
           ) : (
             <Card className="border-dashed">
@@ -221,7 +251,9 @@ function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="font-display text-xl">Receipt #{saved.receipt_no}</CardTitle>
-                <CardDescription>Preview of exactly what will print.</CardDescription>
+                <CardDescription>
+                  {saved.txn_id ? `Txn ${saved.txn_id} · ` : ""}Preview of exactly what will print.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-[11px] leading-tight">
@@ -237,7 +269,19 @@ function DashboardPage() {
                   <Button variant="outline" onClick={() => downloadReceiptPdf(saved, settings)}>
                     <Download className="size-4" /> Receipt PDF
                   </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!waLink}
+                    onClick={() => waLink && window.open(waLink, "_blank", "noopener")}
+                  >
+                    <MessageCircle className="size-4" /> Send on WhatsApp
+                  </Button>
                 </div>
+                {!waLink ? (
+                  <p className="text-xs text-muted-foreground">
+                    Add the donor&apos;s mobile number to send the receipt on WhatsApp.
+                  </p>
+                ) : null}
                 {!connection ? (
                   <p className="text-xs text-muted-foreground">
                     Connect a Bluetooth or USB thermal printer above to print directly.
