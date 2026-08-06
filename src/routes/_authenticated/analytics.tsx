@@ -20,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 });
 
 function AnalyticsPage() {
+  const [range, setRange] = useState<"30" | "90" | "all">("30");
+
   const { data: donations = [] } = useQuery({
     queryKey: ["donations"],
     queryFn: async () => {
@@ -38,6 +40,45 @@ function AnalyticsPage() {
 
   const grand = chartData.reduce((s, d) => s + d.total, 0);
   const best = chartData.reduce((a, b) => (b.total > a.total ? b : a), chartData[0]!);
+
+  const daily = useMemo(() => {
+    const buckets = new Map<string, { total: number; count: number }>();
+    for (const d of donations) {
+      const key = new Date(d.created_at).toISOString().slice(0, 10);
+      const cur = buckets.get(key) ?? { total: 0, count: 0 };
+      cur.total += Number(d.amount);
+      cur.count += 1;
+      buckets.set(key, cur);
+    }
+    const rows = [...buckets.entries()]
+      .map(([day, v]) => ({
+        day,
+        label: new Date(`${day}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+        ...v,
+      }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+    if (range === "all") return rows;
+    return rows.slice(-Number(range));
+  }, [donations, range]);
+
+  const yearly = useMemo(() => {
+    const buckets = new Map<string, { total: number; count: number }>();
+    for (const d of donations) {
+      const year = String(new Date(d.created_at).getFullYear());
+      const cur = buckets.get(year) ?? { total: 0, count: 0 };
+      cur.total += Number(d.amount);
+      cur.count += 1;
+      buckets.set(year, cur);
+    }
+    return [...buckets.entries()].map(([year, v]) => ({ year, ...v })).sort((a, b) => b.year.localeCompare(a.year));
+  }, [donations]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todayTotal = donations
+    .filter((d) => new Date(d.created_at).toISOString().slice(0, 10) === today)
+    .reduce((s, d) => s + Number(d.amount), 0);
+  const currentYear = String(new Date().getFullYear());
+
 
   return (
     <div className="space-y-6">
