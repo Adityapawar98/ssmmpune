@@ -53,6 +53,7 @@ export function buildReceiptLines(donation: Donation, settings: ReceiptSettings)
   lines.push(center("DONATION RECEIPT", w));
   lines.push(rule(w));
   lines.push(pair("Receipt", `#${donation.receipt_no}`, w));
+  if (donation.txn_id) lines.push(pair("Txn ID", donation.txn_id, w));
   lines.push(
     pair("Date", new Date(donation.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }), w),
   );
@@ -61,6 +62,7 @@ export function buildReceiptLines(donation: Donation, settings: ReceiptSettings)
   if (settings.show_lane) lines.push(pair("Lane", donation.lane, w));
   if (settings.show_collector && donation.collected_by_name)
     lines.push(pair("Collector", donation.collected_by_name.slice(0, w - 12), w));
+  lines.push(pair("Mode", donation.payment_mode === "cash" ? "CASH" : "ONLINE (UPI)", w));
   if (settings.show_upi_ref && donation.upi_ref) lines.push(pair("UPI Ref", donation.upi_ref, w));
   lines.push(rule(w));
   lines.push(pair("AMOUNT", `Rs. ${Number(donation.amount).toFixed(2)}`, w));
@@ -71,3 +73,42 @@ export function buildReceiptLines(donation: Donation, settings: ReceiptSettings)
   lines.push(center("Thank you for your support", w));
   return lines;
 }
+
+/** Plain WhatsApp message body summarising a receipt. */
+export function buildWhatsappText(donation: Donation, settings: ReceiptSettings): string {
+  const date = new Date(donation.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const parts = [
+    `*${settings.mandal_name}*`,
+    settings.header_text || "",
+    "",
+    `Receipt No: #${donation.receipt_no}`,
+    donation.txn_id ? `Txn ID: ${donation.txn_id}` : "",
+    `Date: ${date}`,
+    `Donor: ${donation.donor_name}`,
+    `Lane: ${donation.lane}`,
+    `Mode: ${donation.payment_mode === "cash" ? "Cash" : "Online (UPI)"}`,
+    donation.upi_ref ? `UPI Ref: ${donation.upi_ref}` : "",
+    `Amount: Rs. ${Number(donation.amount).toFixed(2)}`,
+    `Status: ${donation.status === "paid" ? "PAID" : "PENDING"}`,
+    "",
+    settings.footer_text || "",
+    "Thank you for your support!",
+  ];
+  return parts.filter((l) => l !== "").join("\n");
+}
+
+/** Normalise an Indian phone number for wa.me (10 digits get the 91 country code). */
+export function waPhone(phone: string | null): string | null {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.length >= 11 && digits.length <= 15) return digits;
+  return null;
+}
+
+/** wa.me deep link that opens WhatsApp with the receipt pre-filled. */
+export function buildWhatsappLink(donation: Donation, settings: ReceiptSettings): string | null {
+  const phone = waPhone(donation.donor_phone);
+  if (!phone) return null;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsappText(donation, settings))}`;
+}
+
