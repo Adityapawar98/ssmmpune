@@ -83,6 +83,8 @@ function SettingsPage() {
       collected_by_name: "Volunteer",
       paid_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
+      payment_mode: "online",
+      txn_id: `SSMM-${new Date().getFullYear()}-001001`,
     },
     form,
   );
