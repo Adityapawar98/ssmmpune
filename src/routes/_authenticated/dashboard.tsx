@@ -44,20 +44,21 @@ function DashboardPage() {
   const [lane, setLane] = useState<string>(LANES[0]);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [mode, setMode] = useState<"online" | "cash">("online");
   const [saved, setSaved] = useState<Donation | null>(null);
 
   const numericAmount = Number(amount);
   const validAmount = Number.isFinite(numericAmount) && numericAmount > 0;
 
   const upiUri = useMemo(() => {
-    if (!settings || !validAmount) return "";
+    if (!settings || !validAmount || mode === "cash") return "";
     return buildUpiUri({
       upiId: settings.upi_id,
       payeeName: settings.mandal_name,
       amount: numericAmount,
       note: note || `Ganesh Utsav ${lane}`,
     });
-  }, [settings, validAmount, numericAmount, note, lane]);
+  }, [settings, validAmount, numericAmount, note, lane, mode]);
 
   const createDonation = useMutation({
     mutationFn: async (status: "paid" | "pending") => {
