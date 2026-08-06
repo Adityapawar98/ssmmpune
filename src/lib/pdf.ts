@@ -41,20 +41,22 @@ export function downloadLedgerPdf(
 
   autoTable(doc, {
     startY: 38,
-    head: [["Receipt", "Date", "Donor", "Phone", "Lane", "Status", "UPI Ref", "Amount (Rs.)"]],
+    head: [["Receipt", "Txn ID", "Date", "Donor", "Phone", "Lane", "Mode", "Status", "UPI Ref", "Amount (Rs.)"]],
     body: donations.map((d) => [
       `#${d.receipt_no}`,
+      d.txn_id ?? "-",
       formatDateTime(d.created_at),
       d.donor_name,
       d.donor_phone ?? "-",
       d.lane,
+      d.payment_mode === "cash" ? "Cash" : "Online",
       d.status === "paid" ? "Paid" : "Pending",
       d.upi_ref ?? "-",
       Number(d.amount).toFixed(2),
     ]),
     styles: { fontSize: 8, cellPadding: 1.5 },
     headStyles: { fillColor: [214, 122, 32] },
-    columnStyles: { 7: { halign: "right" } },
+    columnStyles: { 9: { halign: "right" } },
   });
 
   const laneTotals = new Map<string, number>();
