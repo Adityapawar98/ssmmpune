@@ -127,6 +127,27 @@ function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
+              <Label>Payment mode</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={mode === "online" ? "default" : "outline"}
+                  className="h-12"
+                  onClick={() => setMode("online")}
+                >
+                  <Smartphone className="size-4" /> Online (UPI)
+                </Button>
+                <Button
+                  type="button"
+                  variant={mode === "cash" ? "default" : "outline"}
+                  className="h-12"
+                  onClick={() => setMode("cash")}
+                >
+                  <Banknote className="size-4" /> Cash
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="donor">Donor name</Label>
               <Input
                 id="donor"
