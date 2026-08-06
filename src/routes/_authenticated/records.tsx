@@ -125,43 +125,59 @@ function RecordsPage() {
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2 pr-3 font-medium">#</th>
+                  <th className="py-2 pr-3 font-medium">Txn ID</th>
                   <th className="py-2 pr-3 font-medium">Date</th>
                   <th className="py-2 pr-3 font-medium">Donor</th>
                   <th className="py-2 pr-3 font-medium">Lane</th>
+                  <th className="py-2 pr-3 font-medium">Mode</th>
                   <th className="py-2 pr-3 font-medium">Status</th>
                   <th className="py-2 pr-3 text-right font-medium">Amount</th>
                   <th className="py-2 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((d) => (
-                  <tr key={d.id} className="border-b border-border/60">
-                    <td className="py-2 pr-3">{d.receipt_no}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(d.created_at)}</td>
-                    <td className="py-2 pr-3">{d.donor_name}</td>
-                    <td className="py-2 pr-3">{d.lane}</td>
-                    <td className="py-2 pr-3">{d.status === "paid" ? "Paid" : "Pending"}</td>
-                    <td className="py-2 pr-3 text-right font-medium">{formatINR(Number(d.amount))}</td>
-                    <td className="flex gap-1 py-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!settings}
-                        onClick={() => settings && browserPrintReceipt(d, settings)}
-                      >
-                        <Printer className="size-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!settings}
-                        onClick={() => settings && downloadReceiptPdf(d, settings)}
-                      >
-                        <Download className="size-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((d) => {
+                  const wa = settings ? buildWhatsappLink(d, settings) : null;
+                  return (
+                    <tr key={d.id} className="border-b border-border/60">
+                      <td className="py-2 pr-3">{d.receipt_no}</td>
+                      <td className="py-2 pr-3 font-mono text-xs whitespace-nowrap">{d.txn_id ?? "—"}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(d.created_at)}</td>
+                      <td className="py-2 pr-3">{d.donor_name}</td>
+                      <td className="py-2 pr-3">{d.lane}</td>
+                      <td className="py-2 pr-3">{d.payment_mode === "cash" ? "Cash" : "Online"}</td>
+                      <td className="py-2 pr-3">{d.status === "paid" ? "Paid" : "Pending"}</td>
+                      <td className="py-2 pr-3 text-right font-medium">{formatINR(Number(d.amount))}</td>
+                      <td className="flex gap-1 py-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={!settings}
+                          onClick={() => settings && browserPrintReceipt(d, settings)}
+                        >
+                          <Printer className="size-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={!settings}
+                          onClick={() => settings && downloadReceiptPdf(d, settings)}
+                        >
+                          <Download className="size-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={!wa}
+                          title={wa ? "Send receipt on WhatsApp" : "No donor phone number"}
+                          onClick={() => wa && window.open(wa, "_blank", "noopener")}
+                        >
+                          <MessageCircle className="size-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
