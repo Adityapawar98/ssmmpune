@@ -89,6 +89,7 @@ function DashboardPage() {
   });
 
   const receiptLines = saved && settings ? buildReceiptLines(saved, settings) : [];
+  const waLink = saved && settings ? buildWhatsappLink(saved, settings) : null;
 
   async function handleThermalPrint() {
     if (!receiptLines.length) return;
