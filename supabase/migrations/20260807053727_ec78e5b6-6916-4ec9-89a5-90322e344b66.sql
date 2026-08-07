@@ -1,0 +1,1 @@
+ALTER TABLE public.donations ALTER COLUMN receipt_no RESTART WITH 1;
