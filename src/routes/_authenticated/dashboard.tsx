@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadReceiptPdf } from "@/lib/pdf";
 import { buildReceiptLines, buildUpiUri, buildWhatsappLink, type Donation } from "@/lib/receipt";
+import { sendWhatsappReceipt } from "@/lib/send-whatsapp";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -272,10 +274,11 @@ function DashboardPage() {
                   <Button
                     variant="outline"
                     disabled={!waLink}
-                    onClick={() => waLink && window.open(waLink, "_blank", "noopener")}
+                    onClick={() => sendWhatsappReceipt(saved, settings)}
                   >
                     <MessageCircle className="size-4" /> Send on WhatsApp
                   </Button>
+
                 </div>
                 {!waLink ? (
                   <p className="text-xs text-muted-foreground">
