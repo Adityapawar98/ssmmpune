@@ -281,7 +281,8 @@ function RecordsPage() {
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogFooter>
+        </AlertDialogContent>
+
       </AlertDialog>
     </div>
   );
