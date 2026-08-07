@@ -105,10 +105,39 @@ export function waPhone(phone: string | null): string | null {
   return null;
 }
 
-/** wa.me deep link that opens WhatsApp with the receipt pre-filled. */
+/** Deep link that opens WhatsApp with the receipt pre-filled (platform aware). */
 export function buildWhatsappLink(donation: Donation, settings: ReceiptSettings): string | null {
   const phone = waPhone(donation.donor_phone);
   if (!phone) return null;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsappText(donation, settings))}`;
+  const text = encodeURIComponent(buildWhatsappText(donation, settings));
+  const isMobile =
+    typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  return isMobile
+    ? `https://wa.me/${phone}?text=${text}`
+    : `https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
 }
+
+/**
+ * Open WhatsApp via a real anchor click (script popups from an embedded preview
+ * get blocked). Returns false when the browser refused to open a tab.
+ */
+export function openWhatsapp(donation: Donation, settings: ReceiptSettings): boolean {
+  const href = buildWhatsappLink(donation, settings);
+  if (!href || typeof document === "undefined") return false;
+  const a = document.createElement("a");
+  a.href = href;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  try {
+    a.click();
+    return true;
+  } catch {
+    return false;
+  } finally {
+    a.remove();
+  }
+}
+
 
