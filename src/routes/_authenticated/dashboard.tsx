@@ -272,10 +272,11 @@ function DashboardPage() {
                   <Button
                     variant="outline"
                     disabled={!waLink}
-                    onClick={() => waLink && window.open(waLink, "_blank", "noopener")}
+                    onClick={() => sendWhatsappReceipt(saved, settings)}
                   >
                     <MessageCircle className="size-4" /> Send on WhatsApp
                   </Button>
+
                 </div>
                 {!waLink ? (
                   <p className="text-xs text-muted-foreground">
