@@ -1,17 +1,30 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Download, MessageCircle, Printer } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, MessageCircle, Printer, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useReceiptSettings } from "@/hooks/useAuthUser";
+import { useIsAdmin, useReceiptSettings, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime, formatINR, LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadLedgerPdf, downloadReceiptPdf } from "@/lib/pdf";
-import { buildWhatsappLink, type Donation } from "@/lib/receipt";
+import { waPhone, type Donation } from "@/lib/receipt";
+import { sendWhatsappReceipt } from "@/lib/send-whatsapp";
 
 export const Route = createFileRoute("/_authenticated/records")({
   head: () => ({
@@ -26,10 +39,15 @@ export const Route = createFileRoute("/_authenticated/records")({
 });
 
 function RecordsPage() {
+  const queryClient = useQueryClient();
   const { data: settings } = useReceiptSettings();
+  const { user } = useSessionUser();
+  const { data: isAdmin } = useIsAdmin(user?.id);
   const [search, setSearch] = useState("");
   const [lane, setLane] = useState("all");
   const [mode, setMode] = useState("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const { data: donations = [], isLoading } = useQuery({
     queryKey: ["donations"],
@@ -54,7 +72,33 @@ function RecordsPage() {
     );
   }, [donations, search, lane, mode]);
 
+  const visibleIds = useMemo(() => new Set(filtered.map((d) => d.id)), [filtered]);
+  const selectedVisible = selected.filter((id) => visibleIds.has(id));
+  const selectedTotal = filtered
+    .filter((d) => selectedVisible.includes(d.id))
+    .reduce((s, d) => s + Number(d.amount), 0);
+  const allSelected = filtered.length > 0 && selectedVisible.length === filtered.length;
+
   const total = filtered.reduce((s, d) => s + Number(d.amount), 0);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("donations").delete().in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      setSelected([]);
+      setConfirmOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["donations"] });
+      toast.success(`${count} receipt${count === 1 ? "" : "s"} deleted`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete the selected receipts"),
+  });
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelected((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
+  }
 
   return (
     <div className="space-y-6">
@@ -110,6 +154,19 @@ function RecordsPage() {
         </Select>
       </div>
 
+      {isAdmin && selectedVisible.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-4 py-3">
+          <p className="mr-auto text-sm font-medium">
+            {selectedVisible.length} selected · {formatINR(selectedTotal)}
+          </p>
+          <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
+            Clear
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
+            <Trash2 className="size-4" /> Delete selected
+          </Button>
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -124,6 +181,15 @@ function RecordsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
+                  {isAdmin ? (
+                    <th className="py-2 pr-3">
+                      <Checkbox
+                        checked={allSelected}
+                        aria-label="Select all receipts"
+                        onCheckedChange={(c) => setSelected(c ? filtered.map((d) => d.id) : [])}
+                      />
+                    </th>
+                  ) : null}
                   <th className="py-2 pr-3 font-medium">#</th>
                   <th className="py-2 pr-3 font-medium">Txn ID</th>
                   <th className="py-2 pr-3 font-medium">Date</th>
@@ -137,9 +203,18 @@ function RecordsPage() {
               </thead>
               <tbody>
                 {filtered.map((d) => {
-                  const wa = settings ? buildWhatsappLink(d, settings) : null;
+                  const canWa = !!settings && !!waPhone(d.donor_phone);
                   return (
                     <tr key={d.id} className="border-b border-border/60">
+                      {isAdmin ? (
+                        <td className="py-2 pr-3">
+                          <Checkbox
+                            checked={selected.includes(d.id)}
+                            aria-label={`Select receipt ${d.receipt_no}`}
+                            onCheckedChange={(c) => toggleOne(d.id, !!c)}
+                          />
+                        </td>
+                      ) : null}
                       <td className="py-2 pr-3">{d.receipt_no}</td>
                       <td className="py-2 pr-3 font-mono text-xs whitespace-nowrap">{d.txn_id ?? "—"}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(d.created_at)}</td>
@@ -168,9 +243,9 @@ function RecordsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          disabled={!wa}
-                          title={wa ? "Send receipt on WhatsApp" : "No donor phone number"}
-                          onClick={() => wa && window.open(wa, "_blank", "noopener")}
+                          disabled={!canWa}
+                          title={canWa ? "Send receipt on WhatsApp" : "No donor phone number"}
+                          onClick={() => settings && sendWhatsappReceipt(d, settings)}
                         >
                           <MessageCircle className="size-4" />
                         </Button>
@@ -183,6 +258,31 @@ function RecordsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedVisible.length} receipt{selectedVisible.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the selected donations from the ledger. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                deleteMutation.mutate(selectedVisible);
+              }}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogFooter>
+      </AlertDialog>
     </div>
   );
 }
