@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadReceiptPdf } from "@/lib/pdf";
 import { buildReceiptLines, buildUpiUri, buildWhatsappLink, type Donation } from "@/lib/receipt";
+import { sendWhatsappReceipt } from "@/lib/send-whatsapp";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
