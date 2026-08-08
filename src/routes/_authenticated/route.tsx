@@ -23,6 +23,7 @@ const NAV = [
   { to: "/records", label: "Records", icon: FileText, adminOnly: false },
   { to: "/analytics", label: "Analytics", icon: BarChart3, adminOnly: false },
   { to: "/settings", label: "Receipt setup", icon: Settings, adminOnly: true },
+  { to: "/audit", label: "Audit log", icon: ShieldCheck, adminOnly: true },
 ] as const;
 
 function AuthenticatedLayout() {
@@ -33,11 +34,18 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   async function signOut() {
+    audit({
+      action: "Signed out",
+      category: "security",
+      summary: `${user?.email ?? "A user"} signed out of the tracker`,
+    });
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
+    resetAuditActorCache();
     navigate({ to: "/", replace: true });
   }
+
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
