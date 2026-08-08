@@ -84,18 +84,30 @@ function RecordsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
+      const removed = donations.filter((d) => ids.includes(d.id));
       const { error } = await supabase.from("donations").delete().in("id", ids);
       if (error) throw error;
-      return ids.length;
+      return removed;
     },
-    onSuccess: (count) => {
+    onSuccess: (removed) => {
+      const count = removed.length;
       setSelected([]);
       setConfirmOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["donations"] });
+      audit({
+        action: "Donations deleted",
+        category: "security",
+        entity: "donations",
+        summary: `Deleted ${count} receipt${count === 1 ? "" : "s"} (${removed
+          .map((d) => d.txn_id ?? `#${d.receipt_no}`)
+          .join(", ")}) totalling ${formatINR(removed.reduce((s, d) => s + Number(d.amount), 0))}`,
+        details: { receipts: removed.map((d) => ({ receipt_no: d.receipt_no, txn_id: d.txn_id, amount: d.amount })) },
+      });
       toast.success(`${count} receipt${count === 1 ? "" : "s"} deleted`);
     },
     onError: (e: Error) => toast.error(e.message || "Could not delete the selected receipts"),
   });
+
 
   function toggleOne(id: string, checked: boolean) {
     setSelected((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
