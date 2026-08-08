@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, FileText, LogOut, Receipt, Settings } from "lucide-react";
+import { BarChart3, FileText, LogOut, Receipt, Settings, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useIsAdmin, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+import { audit, resetAuditActorCache } from "@/lib/audit";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
