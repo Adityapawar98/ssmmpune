@@ -124,15 +124,22 @@ function RecordsPage() {
         </div>
         <Button
           disabled={!settings || !filtered.length}
-          onClick={() =>
-            settings &&
-            downloadLedgerPdf(filtered, settings, {
-              rangeLabel: `${lane === "all" ? "All lanes" : lane} · ${mode === "all" ? "All modes" : mode === "cash" ? "Cash" : "Online"}`,
-            })
-          }
+          onClick={() => {
+            if (!settings) return;
+            const rangeLabel = `${lane === "all" ? "All lanes" : lane} · ${mode === "all" ? "All modes" : mode === "cash" ? "Cash" : "Online"}`;
+            downloadLedgerPdf(filtered, settings, { rangeLabel });
+            audit({
+              action: "Ledger exported",
+              category: "ledger",
+              entity: "donations",
+              summary: `Exported ledger PDF — ${filtered.length} receipts, ${formatINR(total)} (${rangeLabel})`,
+              details: { count: filtered.length, total, rangeLabel },
+            });
+          }}
         >
           <Download className="size-4" /> Export ledger PDF
         </Button>
+
       </div>
 
       <div className="flex flex-wrap gap-3">
