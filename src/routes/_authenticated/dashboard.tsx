@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useProfile, useReceiptSettings, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+import { audit } from "@/lib/audit";
 import { LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadReceiptPdf } from "@/lib/pdf";
 import { buildReceiptLines, buildUpiUri, buildWhatsappLink, type Donation } from "@/lib/receipt";
