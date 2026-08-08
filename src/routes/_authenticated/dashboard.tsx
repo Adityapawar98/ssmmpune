@@ -287,19 +287,35 @@ function DashboardPage() {
                   <Button onClick={() => void handleThermalPrint()} disabled={!connection}>
                     <Printer className="size-4" /> Print on thermal
                   </Button>
-                  <Button variant="outline" onClick={() => browserPrintReceipt(saved, settings)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      browserPrintReceipt(saved, settings);
+                      auditReceiptAction("Receipt printed", "Browser-printed");
+                    }}
+                  >
                     <Printer className="size-4" /> Browser print
                   </Button>
-                  <Button variant="outline" onClick={() => downloadReceiptPdf(saved, settings)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      downloadReceiptPdf(saved, settings);
+                      auditReceiptAction("Receipt downloaded", "Downloaded PDF of");
+                    }}
+                  >
                     <Download className="size-4" /> Receipt PDF
                   </Button>
                   <Button
                     variant="outline"
                     disabled={!waLink}
-                    onClick={() => sendWhatsappReceipt(saved, settings)}
+                    onClick={() => {
+                      sendWhatsappReceipt(saved, settings);
+                      auditReceiptAction("Receipt sent on WhatsApp", "Sent on WhatsApp");
+                    }}
                   >
                     <MessageCircle className="size-4" /> Send on WhatsApp
                   </Button>
+
 
                 </div>
                 {!waLink ? (
