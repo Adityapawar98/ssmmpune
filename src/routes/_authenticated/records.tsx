@@ -248,7 +248,18 @@ function RecordsPage() {
                           size="sm"
                           variant="ghost"
                           disabled={!settings}
-                          onClick={() => settings && browserPrintReceipt(d, settings)}
+                          title="Reprint receipt"
+                          onClick={() => {
+                            if (!settings) return;
+                            browserPrintReceipt(d, settings);
+                            audit({
+                              action: "Receipt reprinted",
+                              category: "receipt",
+                              entity: "donations",
+                              entityId: d.id,
+                              summary: `Reprinted receipt ${d.txn_id ?? `#${d.receipt_no}`} for ${d.donor_name}`,
+                            });
+                          }}
                         >
                           <Printer className="size-4" />
                         </Button>
@@ -256,7 +267,18 @@ function RecordsPage() {
                           size="sm"
                           variant="ghost"
                           disabled={!settings}
-                          onClick={() => settings && downloadReceiptPdf(d, settings)}
+                          title="Download receipt PDF"
+                          onClick={() => {
+                            if (!settings) return;
+                            downloadReceiptPdf(d, settings);
+                            audit({
+                              action: "Receipt downloaded",
+                              category: "receipt",
+                              entity: "donations",
+                              entityId: d.id,
+                              summary: `Downloaded PDF of receipt ${d.txn_id ?? `#${d.receipt_no}`}`,
+                            });
+                          }}
                         >
                           <Download className="size-4" />
                         </Button>
@@ -265,10 +287,21 @@ function RecordsPage() {
                           variant="ghost"
                           disabled={!canWa}
                           title={canWa ? "Send receipt on WhatsApp" : "No donor phone number"}
-                          onClick={() => settings && sendWhatsappReceipt(d, settings)}
+                          onClick={() => {
+                            if (!settings) return;
+                            sendWhatsappReceipt(d, settings);
+                            audit({
+                              action: "Receipt sent on WhatsApp",
+                              category: "receipt",
+                              entity: "donations",
+                              entityId: d.id,
+                              summary: `Sent receipt ${d.txn_id ?? `#${d.receipt_no}`} to ${d.donor_name}`,
+                            });
+                          }}
                         >
                           <MessageCircle className="size-4" />
                         </Button>
+
                       </td>
                     </tr>
                   );
