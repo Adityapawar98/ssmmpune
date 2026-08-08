@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useReceiptSettings } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+import { audit } from "@/lib/audit";
 import type { ReceiptSettings } from "@/lib/receipt";
 import { buildReceiptLines } from "@/lib/receipt";
 
@@ -38,6 +39,9 @@ function SettingsPage() {
 
   const save = useMutation({
     mutationFn: async (values: ReceiptSettings) => {
+      const changed = data
+        ? (Object.keys(values) as (keyof ReceiptSettings)[]).filter((k) => values[k] !== data[k])
+        : [];
       const { error } = await supabase
         .from("receipt_settings")
         .update({
@@ -55,13 +59,24 @@ function SettingsPage() {
         })
         .eq("id", values.id);
       if (error) throw error;
+      return changed as string[];
     },
-    onSuccess: () => {
+    onSuccess: (changed) => {
       queryClient.invalidateQueries({ queryKey: ["receipt-settings"] });
+      audit({
+        action: "Receipt settings updated",
+        category: "security",
+        entity: "receipt_settings",
+        summary: changed.length
+          ? `Changed ${changed.join(", ")}`
+          : "Saved receipt settings with no field changes",
+        details: { changed },
+      });
       toast.success("Receipt settings saved");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;
 

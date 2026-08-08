@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { audit, resetAuditActorCache } from "@/lib/audit";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -83,6 +84,8 @@ function LoginPage() {
       toast.error(error.message);
       return;
     }
+    resetAuditActorCache();
+    audit({ action: "Signed in", category: "security", summary: `${email.trim()} signed in with email and password` });
     toast.success("Welcome back!");
     navigate({ to: "/dashboard" });
   }
@@ -104,12 +107,15 @@ function LoginPage() {
       return;
     }
     if (data.session) {
+      resetAuditActorCache();
+      audit({ action: "Account created", category: "security", summary: `New account created for ${email.trim()}` });
       toast.success("Account created");
       navigate({ to: "/dashboard" });
     } else {
       toast.success("Account created — check your email to confirm, then sign in.");
     }
   }
+
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">

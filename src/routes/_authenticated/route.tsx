@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, FileText, LogOut, Receipt, Settings } from "lucide-react";
+import { BarChart3, FileText, LogOut, Receipt, Settings, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useIsAdmin, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+import { audit, resetAuditActorCache } from "@/lib/audit";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -22,6 +23,7 @@ const NAV = [
   { to: "/records", label: "Records", icon: FileText, adminOnly: false },
   { to: "/analytics", label: "Analytics", icon: BarChart3, adminOnly: false },
   { to: "/settings", label: "Receipt setup", icon: Settings, adminOnly: true },
+  { to: "/audit", label: "Audit log", icon: ShieldCheck, adminOnly: true },
 ] as const;
 
 function AuthenticatedLayout() {
@@ -32,11 +34,18 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   async function signOut() {
+    audit({
+      action: "Signed out",
+      category: "security",
+      summary: `${user?.email ?? "A user"} signed out of the tracker`,
+    });
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
+    resetAuditActorCache();
     navigate({ to: "/", replace: true });
   }
+
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

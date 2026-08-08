@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useProfile, useReceiptSettings, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+import { audit } from "@/lib/audit";
 import { LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadReceiptPdf } from "@/lib/pdf";
 import { buildReceiptLines, buildUpiUri, buildWhatsappLink, type Donation } from "@/lib/receipt";
@@ -85,6 +86,14 @@ function DashboardPage() {
     onSuccess: (donation) => {
       setSaved(donation);
       queryClient.invalidateQueries({ queryKey: ["donations"] });
+      audit({
+        action: "Receipt generated",
+        category: "receipt",
+        entity: "donations",
+        entityId: donation.id,
+        summary: `Generated receipt ${donation.txn_id ?? `#${donation.receipt_no}`} for ${donation.donor_name} — ₹${donation.amount} (${donation.payment_mode === "cash" ? "Cash" : "Online"}, ${donation.status})`,
+        details: { receipt_no: donation.receipt_no, amount: donation.amount, lane: donation.lane },
+      });
       toast.success(`Receipt #${donation.receipt_no} saved`);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -93,15 +102,28 @@ function DashboardPage() {
   const receiptLines = saved && settings ? buildReceiptLines(saved, settings) : [];
   const waLink = saved && settings ? buildWhatsappLink(saved, settings) : null;
 
+  function auditReceiptAction(action: string, verb: string) {
+    if (!saved) return;
+    audit({
+      action,
+      category: "receipt",
+      entity: "donations",
+      entityId: saved.id,
+      summary: `${verb} receipt ${saved.txn_id ?? `#${saved.receipt_no}`} for ${saved.donor_name}`,
+    });
+  }
+
   async function handleThermalPrint() {
     if (!receiptLines.length) return;
     try {
       await print(receiptLines);
+      auditReceiptAction("Receipt printed", "Printed on thermal printer:");
       toast.success("Sent to thermal printer");
     } catch (e) {
       toast.error((e as Error).message);
     }
   }
+
 
   function reset() {
     setDonorName("");
@@ -265,19 +287,35 @@ function DashboardPage() {
                   <Button onClick={() => void handleThermalPrint()} disabled={!connection}>
                     <Printer className="size-4" /> Print on thermal
                   </Button>
-                  <Button variant="outline" onClick={() => browserPrintReceipt(saved, settings)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      browserPrintReceipt(saved, settings);
+                      auditReceiptAction("Receipt printed", "Browser-printed");
+                    }}
+                  >
                     <Printer className="size-4" /> Browser print
                   </Button>
-                  <Button variant="outline" onClick={() => downloadReceiptPdf(saved, settings)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      downloadReceiptPdf(saved, settings);
+                      auditReceiptAction("Receipt downloaded", "Downloaded PDF of");
+                    }}
+                  >
                     <Download className="size-4" /> Receipt PDF
                   </Button>
                   <Button
                     variant="outline"
                     disabled={!waLink}
-                    onClick={() => sendWhatsappReceipt(saved, settings)}
+                    onClick={() => {
+                      sendWhatsappReceipt(saved, settings);
+                      auditReceiptAction("Receipt sent on WhatsApp", "Sent on WhatsApp");
+                    }}
                   >
                     <MessageCircle className="size-4" /> Send on WhatsApp
                   </Button>
+
 
                 </div>
                 {!waLink ? (

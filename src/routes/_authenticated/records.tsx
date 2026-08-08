@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsAdmin, useReceiptSettings, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+import { audit } from "@/lib/audit";
 import { formatDateTime, formatINR, LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadLedgerPdf, downloadReceiptPdf } from "@/lib/pdf";
 import { waPhone, type Donation } from "@/lib/receipt";
@@ -83,18 +84,30 @@ function RecordsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
+      const removed = donations.filter((d) => ids.includes(d.id));
       const { error } = await supabase.from("donations").delete().in("id", ids);
       if (error) throw error;
-      return ids.length;
+      return removed;
     },
-    onSuccess: (count) => {
+    onSuccess: (removed) => {
+      const count = removed.length;
       setSelected([]);
       setConfirmOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["donations"] });
+      audit({
+        action: "Donations deleted",
+        category: "security",
+        entity: "donations",
+        summary: `Deleted ${count} receipt${count === 1 ? "" : "s"} (${removed
+          .map((d) => d.txn_id ?? `#${d.receipt_no}`)
+          .join(", ")}) totalling ${formatINR(removed.reduce((s, d) => s + Number(d.amount), 0))}`,
+        details: { receipts: removed.map((d) => ({ receipt_no: d.receipt_no, txn_id: d.txn_id, amount: d.amount })) },
+      });
       toast.success(`${count} receipt${count === 1 ? "" : "s"} deleted`);
     },
     onError: (e: Error) => toast.error(e.message || "Could not delete the selected receipts"),
   });
+
 
   function toggleOne(id: string, checked: boolean) {
     setSelected((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
@@ -111,15 +124,22 @@ function RecordsPage() {
         </div>
         <Button
           disabled={!settings || !filtered.length}
-          onClick={() =>
-            settings &&
-            downloadLedgerPdf(filtered, settings, {
-              rangeLabel: `${lane === "all" ? "All lanes" : lane} · ${mode === "all" ? "All modes" : mode === "cash" ? "Cash" : "Online"}`,
-            })
-          }
+          onClick={() => {
+            if (!settings) return;
+            const rangeLabel = `${lane === "all" ? "All lanes" : lane} · ${mode === "all" ? "All modes" : mode === "cash" ? "Cash" : "Online"}`;
+            downloadLedgerPdf(filtered, settings, { rangeLabel });
+            audit({
+              action: "Ledger exported",
+              category: "ledger",
+              entity: "donations",
+              summary: `Exported ledger PDF — ${filtered.length} receipts, ${formatINR(total)} (${rangeLabel})`,
+              details: { count: filtered.length, total, rangeLabel },
+            });
+          }}
         >
           <Download className="size-4" /> Export ledger PDF
         </Button>
+
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -228,7 +248,18 @@ function RecordsPage() {
                           size="sm"
                           variant="ghost"
                           disabled={!settings}
-                          onClick={() => settings && browserPrintReceipt(d, settings)}
+                          title="Reprint receipt"
+                          onClick={() => {
+                            if (!settings) return;
+                            browserPrintReceipt(d, settings);
+                            audit({
+                              action: "Receipt reprinted",
+                              category: "receipt",
+                              entity: "donations",
+                              entityId: d.id,
+                              summary: `Reprinted receipt ${d.txn_id ?? `#${d.receipt_no}`} for ${d.donor_name}`,
+                            });
+                          }}
                         >
                           <Printer className="size-4" />
                         </Button>
@@ -236,7 +267,18 @@ function RecordsPage() {
                           size="sm"
                           variant="ghost"
                           disabled={!settings}
-                          onClick={() => settings && downloadReceiptPdf(d, settings)}
+                          title="Download receipt PDF"
+                          onClick={() => {
+                            if (!settings) return;
+                            downloadReceiptPdf(d, settings);
+                            audit({
+                              action: "Receipt downloaded",
+                              category: "receipt",
+                              entity: "donations",
+                              entityId: d.id,
+                              summary: `Downloaded PDF of receipt ${d.txn_id ?? `#${d.receipt_no}`}`,
+                            });
+                          }}
                         >
                           <Download className="size-4" />
                         </Button>
@@ -245,10 +287,21 @@ function RecordsPage() {
                           variant="ghost"
                           disabled={!canWa}
                           title={canWa ? "Send receipt on WhatsApp" : "No donor phone number"}
-                          onClick={() => settings && sendWhatsappReceipt(d, settings)}
+                          onClick={() => {
+                            if (!settings) return;
+                            sendWhatsappReceipt(d, settings);
+                            audit({
+                              action: "Receipt sent on WhatsApp",
+                              category: "receipt",
+                              entity: "donations",
+                              entityId: d.id,
+                              summary: `Sent receipt ${d.txn_id ?? `#${d.receipt_no}`} to ${d.donor_name}`,
+                            });
+                          }}
                         >
                           <MessageCircle className="size-4" />
                         </Button>
+
                       </td>
                     </tr>
                   );
