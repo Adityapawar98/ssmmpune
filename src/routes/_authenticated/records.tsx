@@ -195,124 +195,102 @@ function RecordsPage() {
         <CardHeader>
           <CardTitle className="font-display text-xl">Ledger</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {isLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
           ) : !filtered.length ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No donations recorded yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  {isAdmin ? (
-                    <th className="py-2 pr-3">
-                      <Checkbox
-                        checked={allSelected}
-                        aria-label="Select all receipts"
-                        onCheckedChange={(c) => setSelected(c ? filtered.map((d) => d.id) : [])}
-                      />
-                    </th>
-                  ) : null}
-                  <th className="py-2 pr-3 font-medium">#</th>
-                  <th className="py-2 pr-3 font-medium">Txn ID</th>
-                  <th className="py-2 pr-3 font-medium">Date</th>
-                  <th className="py-2 pr-3 font-medium">Donor</th>
-                  <th className="py-2 pr-3 font-medium">Lane</th>
-                  <th className="py-2 pr-3 font-medium">Mode</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
-                  <th className="py-2 pr-3 text-right font-medium">Amount</th>
-                  <th className="py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((d) => {
-                  const canWa = !!settings && !!waPhone(d.donor_phone);
-                  return (
-                    <tr key={d.id} className="border-b border-border/60">
+            <>
+              {/* Phone layout: stacked cards instead of a sideways-scrolling table */}
+              <ul className="space-y-3 md:hidden">
+                {filtered.map((d) => (
+                  <li key={d.id} className="rounded-lg border border-border p-3">
+                    <div className="flex items-start gap-3">
                       {isAdmin ? (
-                        <td className="py-2 pr-3">
-                          <Checkbox
-                            checked={selected.includes(d.id)}
-                            aria-label={`Select receipt ${d.receipt_no}`}
-                            onCheckedChange={(c) => toggleOne(d.id, !!c)}
-                          />
-                        </td>
+                        <Checkbox
+                          className="mt-1 shrink-0"
+                          checked={selected.includes(d.id)}
+                          aria-label={`Select receipt ${d.receipt_no}`}
+                          onCheckedChange={(c) => toggleOne(d.id, !!c)}
+                        />
                       ) : null}
-                      <td className="py-2 pr-3">{d.receipt_no}</td>
-                      <td className="py-2 pr-3 font-mono text-xs whitespace-nowrap">{d.txn_id ?? "—"}</td>
-                      <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(d.created_at)}</td>
-                      <td className="py-2 pr-3">{d.donor_name}</td>
-                      <td className="py-2 pr-3">{d.lane}</td>
-                      <td className="py-2 pr-3">{d.payment_mode === "cash" ? "Cash" : "Online"}</td>
-                      <td className="py-2 pr-3">{d.status === "paid" ? "Paid" : "Pending"}</td>
-                      <td className="py-2 pr-3 text-right font-medium">{formatINR(Number(d.amount))}</td>
-                      <td className="flex gap-1 py-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={!settings}
-                          title="Reprint receipt"
-                          onClick={() => {
-                            if (!settings) return;
-                            browserPrintReceipt(d, settings);
-                            audit({
-                              action: "Receipt reprinted",
-                              category: "receipt",
-                              entity: "donations",
-                              entityId: d.id,
-                              summary: `Reprinted receipt ${d.txn_id ?? `#${d.receipt_no}`} for ${d.donor_name}`,
-                            });
-                          }}
-                        >
-                          <Printer className="size-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={!settings}
-                          title="Download receipt PDF"
-                          onClick={() => {
-                            if (!settings) return;
-                            downloadReceiptPdf(d, settings);
-                            audit({
-                              action: "Receipt downloaded",
-                              category: "receipt",
-                              entity: "donations",
-                              entityId: d.id,
-                              summary: `Downloaded PDF of receipt ${d.txn_id ?? `#${d.receipt_no}`}`,
-                            });
-                          }}
-                        >
-                          <Download className="size-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={!canWa}
-                          title={canWa ? "Send receipt on WhatsApp" : "No donor phone number"}
-                          onClick={() => {
-                            if (!settings) return;
-                            sendWhatsappReceipt(d, settings);
-                            audit({
-                              action: "Receipt sent on WhatsApp",
-                              category: "receipt",
-                              entity: "donations",
-                              entityId: d.id,
-                              summary: `Sent receipt ${d.txn_id ?? `#${d.receipt_no}`} to ${d.donor_name}`,
-                            });
-                          }}
-                        >
-                          <MessageCircle className="size-4" />
-                        </Button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="truncate font-medium">{d.donor_name}</p>
+                          <p className="shrink-0 font-medium">{formatINR(Number(d.amount))}</p>
+                        </div>
+                        <p className="font-mono text-xs text-muted-foreground">{d.txn_id ?? `#${d.receipt_no}`}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {d.lane} · {d.payment_mode === "cash" ? "Cash" : "Online"} ·{" "}
+                          {d.status === "paid" ? "Paid" : "Pending"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{formatDateTime(d.created_at)}</p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          <RowActions donation={d} settings={settings} />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
 
-                      </td>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      {isAdmin ? (
+                        <th className="py-2 pr-3">
+                          <Checkbox
+                            checked={allSelected}
+                            aria-label="Select all receipts"
+                            onCheckedChange={(c) => setSelected(c ? filtered.map((d) => d.id) : [])}
+                          />
+                        </th>
+                      ) : null}
+                      <th className="py-2 pr-3 font-medium">#</th>
+                      <th className="py-2 pr-3 font-medium">Txn ID</th>
+                      <th className="py-2 pr-3 font-medium">Date</th>
+                      <th className="py-2 pr-3 font-medium">Donor</th>
+                      <th className="py-2 pr-3 font-medium">Lane</th>
+                      <th className="py-2 pr-3 font-medium">Mode</th>
+                      <th className="py-2 pr-3 font-medium">Status</th>
+                      <th className="py-2 pr-3 text-right font-medium">Amount</th>
+                      <th className="py-2 font-medium">Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((d) => (
+                      <tr key={d.id} className="border-b border-border/60">
+                        {isAdmin ? (
+                          <td className="py-2 pr-3">
+                            <Checkbox
+                              checked={selected.includes(d.id)}
+                              aria-label={`Select receipt ${d.receipt_no}`}
+                              onCheckedChange={(c) => toggleOne(d.id, !!c)}
+                            />
+                          </td>
+                        ) : null}
+                        <td className="py-2 pr-3">{d.receipt_no}</td>
+                        <td className="py-2 pr-3 font-mono text-xs whitespace-nowrap">{d.txn_id ?? "—"}</td>
+                        <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(d.created_at)}</td>
+                        <td className="py-2 pr-3">{d.donor_name}</td>
+                        <td className="py-2 pr-3">{d.lane}</td>
+                        <td className="py-2 pr-3">{d.payment_mode === "cash" ? "Cash" : "Online"}</td>
+                        <td className="py-2 pr-3">{d.status === "paid" ? "Paid" : "Pending"}</td>
+                        <td className="py-2 pr-3 text-right font-medium">{formatINR(Number(d.amount))}</td>
+                        <td className="flex gap-1 py-2">
+                          <RowActions donation={d} settings={settings} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
+
       </Card>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
