@@ -78,7 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#d67a20" },
+      { name: "mobile-web-app-capable", content: "yes" },
+
       { name: "author", content: "Shantinagar Sarvajanik Mitra Mandal" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
