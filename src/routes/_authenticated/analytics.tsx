@@ -16,7 +16,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useIsAdmin, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
+
 import { formatINR, LANES, SHORT_LANE } from "@/lib/lanes";
 import type { Donation } from "@/lib/receipt";
 
@@ -33,7 +35,10 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 });
 
 function AnalyticsPage() {
+  const { user } = useSessionUser();
+  const { data: isAdmin, isLoading: roleLoading } = useIsAdmin(user?.id);
   const [range, setRange] = useState<"30" | "90" | "all">("30");
+
 
   const { data: donations = [] } = useQuery({
     queryKey: ["donations"],
@@ -91,6 +96,17 @@ function AnalyticsPage() {
     .filter((d) => new Date(d.created_at).toISOString().slice(0, 10) === today)
     .reduce((s, d) => s + Number(d.amount), 0);
   const currentYear = String(new Date().getFullYear());
+
+  if (!roleLoading && !isAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-xl">Admins only</CardTitle>
+          <CardDescription>Collection analytics are available to admin accounts.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
 
   return (
