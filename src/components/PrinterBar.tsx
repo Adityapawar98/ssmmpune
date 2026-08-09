@@ -80,9 +80,12 @@ export function PrinterBar() {
           ) : null}
           {!isBluetoothSupported() && !isUsbSupported() ? (
             <span className="text-xs text-muted-foreground">
-              Use Chrome or Edge on desktop/Android for direct printing.
+              This device can&apos;t connect to a thermal printer directly (iPhone, iPad and Firefox don&apos;t
+              support it). Use <strong>Print receipt</strong> or <strong>Download PDF</strong> below — an
+              AirPrint or shared printer works from there.
             </span>
           ) : null}
+
         </>
       )}
     </div>
