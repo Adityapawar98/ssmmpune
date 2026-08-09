@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { audit } from "@/lib/audit";
 import { formatDateTime, formatINR, LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadLedgerPdf, downloadReceiptPdf } from "@/lib/pdf";
-import { waPhone, type Donation } from "@/lib/receipt";
+import { waPhone, type Donation, type ReceiptSettings } from "@/lib/receipt";
 import { sendWhatsappReceipt } from "@/lib/send-whatsapp";
 
 export const Route = createFileRoute("/_authenticated/records")({
@@ -319,5 +319,78 @@ function RecordsPage() {
 
       </AlertDialog>
     </div>
+  );
+}
+
+function RowActions({
+  donation: d,
+  settings,
+}: {
+  donation: Donation;
+  settings: ReceiptSettings | null | undefined;
+}) {
+  const canWa = !!settings && !!waPhone(d.donor_phone);
+  const label = d.txn_id ?? `#${d.receipt_no}`;
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={!settings}
+        title="Reprint receipt"
+        onClick={() => {
+          if (!settings) return;
+          browserPrintReceipt(d, settings);
+          audit({
+            action: "Receipt reprinted",
+            category: "receipt",
+            entity: "donations",
+            entityId: d.id,
+            summary: `Reprinted receipt ${label} for ${d.donor_name}`,
+          });
+        }}
+      >
+        <Printer className="size-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={!settings}
+        title="Download receipt PDF"
+        onClick={() => {
+          if (!settings) return;
+          downloadReceiptPdf(d, settings);
+          audit({
+            action: "Receipt downloaded",
+            category: "receipt",
+            entity: "donations",
+            entityId: d.id,
+            summary: `Downloaded PDF of receipt ${label}`,
+          });
+        }}
+      >
+        <Download className="size-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={!canWa}
+        title={canWa ? "Send receipt on WhatsApp" : "No donor phone number"}
+        onClick={() => {
+          if (!settings) return;
+          sendWhatsappReceipt(d, settings);
+          audit({
+            action: "Receipt sent on WhatsApp",
+            category: "receipt",
+            entity: "donations",
+            entityId: d.id,
+            summary: `Sent receipt ${label} to ${d.donor_name}`,
+          });
+        }}
+      >
+        <MessageCircle className="size-4" />
+      </Button>
+    </>
   );
 }
