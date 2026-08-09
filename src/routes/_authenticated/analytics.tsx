@@ -97,6 +97,17 @@ function AnalyticsPage() {
     .reduce((s, d) => s + Number(d.amount), 0);
   const currentYear = String(new Date().getFullYear());
 
+  if (!roleLoading && !isAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-xl">Admins only</CardTitle>
+          <CardDescription>Collection analytics are available to admin accounts.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
 
   return (
     <div className="space-y-6">
