@@ -33,7 +33,10 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 });
 
 function AnalyticsPage() {
+  const { user } = useSessionUser();
+  const { data: isAdmin, isLoading: roleLoading } = useIsAdmin(user?.id);
   const [range, setRange] = useState<"30" | "90" | "all">("30");
+
 
   const { data: donations = [] } = useQuery({
     queryKey: ["donations"],
