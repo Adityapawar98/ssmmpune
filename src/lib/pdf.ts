@@ -82,23 +82,52 @@ export function downloadLedgerPdf(
   doc.save(`donation-ledger-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
-/** Browser print fallback for the same receipt layout. */
+/**
+ * Browser print fallback for the same receipt layout.
+ * Uses a hidden same-page iframe so it works even where pop-ups are blocked
+ * (Safari on iPhone/iPad, locked-down Windows browsers).
+ */
 export function browserPrintReceipt(donation: Donation, settings: ReceiptSettings) {
   const lines = buildReceiptLines(donation, settings);
   const width = settings.paper_width;
   const cols = charWidth(width);
-  const win = window.open("", "_blank", "width=400,height=700");
-  if (!win) return;
-  win.document.write(`<!doctype html><html><head><title>Receipt ${donation.receipt_no}</title>
-  <style>
-    @page { size: ${width} auto; margin: 2mm; }
-    body { font-family: "Courier New", monospace; font-size: ${width === "80mm" ? 12 : 11}px; white-space: pre; margin: 0; }
-    pre { margin: 0; width: ${cols}ch; }
-  </style></head><body><pre>${lines
+  const body = lines
     .join("\n")
     .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")}</pre>
-  <script>window.onload = function () { window.print(); };<\/script>
-  </body></html>`);
-  win.document.close();
+    .replace(/</g, "&lt;");
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  if (!doc) {
+    iframe.remove();
+    return;
+  }
+
+  doc.open();
+  doc.write(`<!doctype html><html><head><title>Receipt ${donation.receipt_no}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    @page { size: ${width} auto; margin: 2mm; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: "Courier New", monospace; font-size: ${width === "80mm" ? 12 : 11}px; white-space: pre; -webkit-text-size-adjust: 100%; }
+    pre { margin: 0; width: ${cols}ch; }
+  </style></head><body><pre>${body}</pre></body></html>`);
+  doc.close();
+
+  const run = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } finally {
+      window.setTimeout(() => iframe.remove(), 60_000);
+    }
+  };
+
+  if (doc.readyState === "complete") window.setTimeout(run, 50);
+  else iframe.onload = () => window.setTimeout(run, 50);
 }
+

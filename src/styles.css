@@ -166,3 +166,26 @@
     var(--color-accent) 20px
   );
 }
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    overflow-wrap: anywhere;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* iOS Safari zooms in on focus when inputs are under 16px. */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea,
+    button {
+      font-size: 16px;
+    }
+  }
+}
