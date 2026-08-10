@@ -71,27 +71,54 @@ function AuthenticatedLayout() {
             <LogOut className="size-4" /> Sign out
           </Button>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2">
-          {NAV.filter((item) => !item.adminOnly || isAdmin).map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
-                pathname === item.to
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground",
-              )}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        {!blocked && (
+          <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2">
+            {NAV.filter((item) => !item.adminOnly || isAdmin).map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+                  pathname === item.to
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground",
+                )}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+                {item.to === "/requests" && pendingCount > 0 && (
+                  <span className="ml-1 rounded-full bg-destructive px-2 py-0.5 text-xs font-semibold text-destructive-foreground">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </nav>
+        )}
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <Outlet />
+        {blocked ? (
+          <Card className="mx-auto max-w-lg">
+            <CardContent className="space-y-4 py-12 text-center">
+              <Clock className="mx-auto size-10 text-primary" />
+              <h1 className="font-display text-2xl">
+                {approval === "rejected" ? "Access not allowed" : "Waiting for admin approval"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {approval === "rejected"
+                  ? "An admin has blocked this account. Please contact the mandal admin if this is a mistake."
+                  : "Your account has been created. An admin of the mandal needs to approve it before you can record donations."}
+              </p>
+              <Button variant="outline" onClick={signOut}>
+                <LogOut className="size-4" /> Sign out
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Outlet />
+        )}
       </main>
+
     </div>
   );
 }
