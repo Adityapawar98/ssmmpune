@@ -60,6 +60,39 @@ export function useProfile(userId: string | undefined) {
   });
 }
 
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
+export function useApprovalStatus(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["approval-status", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<ApprovalStatus> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("approval_status")
+        .eq("id", userId!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.approval_status ?? "pending") as ApprovalStatus;
+    },
+  });
+}
+
+export function usePendingRequestCount(enabled: boolean) {
+  return useQuery({
+    queryKey: ["pending-requests-count"],
+    enabled,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("approval_status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
 export function useReceiptSettings() {
   return useQuery({
     queryKey: ["receipt-settings"],
