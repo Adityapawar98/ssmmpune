@@ -1,9 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, FileText, LogOut, Receipt, Settings, ShieldCheck } from "lucide-react";
+import { BarChart3, Clock, FileText, LogOut, Receipt, Settings, ShieldCheck, UserCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useIsAdmin, useSessionUser } from "@/hooks/useAuthUser";
+import { Card, CardContent } from "@/components/ui/card";
+import { useApprovalStatus, useIsAdmin, usePendingRequestCount, useSessionUser } from "@/hooks/useAuthUser";
+import { useDonationsRealtime } from "@/hooks/useDonationsRealtime";
 import { supabase } from "@/integrations/supabase/client";
 import { audit, resetAuditActorCache } from "@/lib/audit";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,7 @@ const NAV = [
   { to: "/analytics", label: "Analytics", icon: BarChart3, adminOnly: true },
   { to: "/settings", label: "Receipt setup", icon: Settings, adminOnly: true },
   { to: "/audit", label: "Audit log", icon: ShieldCheck, adminOnly: true },
+  { to: "/requests", label: "Login requests", icon: UserCheck, adminOnly: true },
 ] as const;
 
 function AuthenticatedLayout() {
@@ -31,7 +34,10 @@ function AuthenticatedLayout() {
   const queryClient = useQueryClient();
   const { user } = useSessionUser();
   const { data: isAdmin } = useIsAdmin(user?.id);
+  const { data: approval, isLoading: approvalLoading } = useApprovalStatus(user?.id);
+  const { data: pendingCount = 0 } = usePendingRequestCount(!!isAdmin);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useDonationsRealtime(approval === "approved");
 
   async function signOut() {
     audit({
@@ -45,6 +51,9 @@ function AuthenticatedLayout() {
     resetAuditActorCache();
     navigate({ to: "/", replace: true });
   }
+
+  const blocked = !!user && !approvalLoading && approval !== "approved";
+
 
 
   return (
