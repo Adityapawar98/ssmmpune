@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, MessageCircle, Printer, Trash2 } from "lucide-react";
+import { Download, MessageCircle, Pencil, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -17,8 +17,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useIsAdmin, useReceiptSettings, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
 import { audit } from "@/lib/audit";
@@ -26,6 +36,12 @@ import { formatDateTime, formatINR, LANES } from "@/lib/lanes";
 import { browserPrintReceipt, downloadLedgerPdf, downloadReceiptPdf } from "@/lib/pdf";
 import { waPhone, type Donation, type ReceiptSettings } from "@/lib/receipt";
 import { sendWhatsappReceipt } from "@/lib/send-whatsapp";
+
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export const Route = createFileRoute("/_authenticated/records")({
   head: () => ({
@@ -49,6 +65,7 @@ function RecordsPage() {
   const [mode, setMode] = useState("all");
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editing, setEditing] = useState<Donation | null>(null);
 
   const { data: donations = [], isLoading } = useQuery({
     queryKey: ["donations"],
@@ -227,7 +244,7 @@ function RecordsPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">{formatDateTime(d.created_at)}</p>
                         <div className="mt-2 flex flex-wrap gap-1">
-                          <RowActions donation={d} settings={settings} />
+                          <RowActions donation={d} settings={settings} onEdit={() => setEditing(d)} />
                         </div>
                       </div>
                     </div>
@@ -280,7 +297,7 @@ function RecordsPage() {
                         <td className="py-2 pr-3">{d.status === "paid" ? "Paid" : "Pending"}</td>
                         <td className="py-2 pr-3 text-right font-medium">{formatINR(Number(d.amount))}</td>
                         <td className="flex gap-1 py-2">
-                          <RowActions donation={d} settings={settings} />
+                          <RowActions donation={d} settings={settings} onEdit={() => setEditing(d)} />
                         </td>
                       </tr>
                     ))}
@@ -318,6 +335,8 @@ function RecordsPage() {
         </AlertDialogContent>
 
       </AlertDialog>
+
+      <EditDonationDialog donation={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }
@@ -325,15 +344,20 @@ function RecordsPage() {
 function RowActions({
   donation: d,
   settings,
+  onEdit,
 }: {
   donation: Donation;
   settings: ReceiptSettings | null | undefined;
+  onEdit: () => void;
 }) {
   const canWa = !!settings && !!waPhone(d.donor_phone);
   const label = d.txn_id ?? `#${d.receipt_no}`;
 
   return (
     <>
+      <Button size="sm" variant="ghost" title="Edit record" onClick={onEdit}>
+        <Pencil className="size-4" />
+      </Button>
       <Button
         size="sm"
         variant="ghost"
@@ -392,5 +416,214 @@ function RowActions({
         <MessageCircle className="size-4" />
       </Button>
     </>
+  );
+}
+
+function EditDonationDialog({ donation, onClose }: { donation: Donation | null; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    donor_name: "",
+    donor_phone: "",
+    amount: "",
+    created_at: "",
+    lane: "",
+    payment_mode: "online",
+    status: "pending",
+    upi_ref: "",
+    note: "",
+  });
+
+  useEffect(() => {
+    if (!donation) return;
+    setForm({
+      donor_name: donation.donor_name,
+      donor_phone: donation.donor_phone ?? "",
+      amount: String(donation.amount),
+      created_at: toLocalInputValue(donation.created_at),
+      lane: donation.lane,
+      payment_mode: donation.payment_mode,
+      status: donation.status,
+      upi_ref: donation.upi_ref ?? "",
+      note: donation.note ?? "",
+    });
+  }, [donation]);
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!donation) throw new Error("No record selected");
+      const amount = Number(form.amount);
+      if (!form.donor_name.trim()) throw new Error("Donor name is required");
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter a valid amount");
+      const newPaidAt =
+        form.status === "paid" ? (donation.status === "paid" && donation.paid_at ? donation.paid_at : new Date().toISOString()) : null;
+      const patch = {
+        donor_name: form.donor_name.trim(),
+        donor_phone: form.donor_phone.trim() || null,
+        amount,
+        created_at: new Date(form.created_at).toISOString(),
+        lane: form.lane,
+        payment_mode: form.payment_mode,
+        status: form.status,
+        paid_at: newPaidAt,
+        upi_ref: form.upi_ref.trim() || null,
+        note: form.note.trim() || null,
+      };
+      const { error } = await supabase.from("donations").update(patch).eq("id", donation.id);
+      if (error) throw error;
+      return patch;
+    },
+    onSuccess: (patch) => {
+      if (donation) {
+        const changes: string[] = [];
+        const track = (label: string, before: string, after: string) => {
+          if (before !== after) changes.push(`${label}: ${before} → ${after}`);
+        };
+        track("name", donation.donor_name, patch.donor_name);
+        track("phone", donation.donor_phone ?? "—", patch.donor_phone ?? "—");
+        track("amount", formatINR(Number(donation.amount)), formatINR(patch.amount));
+        track("date", formatDateTime(donation.created_at), formatDateTime(patch.created_at));
+        track("lane", donation.lane, patch.lane);
+        track("mode", donation.payment_mode, patch.payment_mode);
+        track("status", donation.status, patch.status);
+        track("UPI ref", donation.upi_ref ?? "—", patch.upi_ref ?? "—");
+        track("note", donation.note ?? "—", patch.note ?? "—");
+        audit({
+          action: "Donation edited",
+          category: "ledger",
+          entity: "donations",
+          entityId: donation.id,
+          summary: `Edited receipt ${donation.txn_id ?? `#${donation.receipt_no}`}${changes.length ? ` — ${changes.join("; ")}` : " (no changes)"}`,
+          details: { before: donation, after: patch },
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: ["donations"] });
+      toast.success("Record updated");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not update the record"),
+  });
+
+  return (
+    <Dialog open={!!donation} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display">
+            Edit receipt {donation?.txn_id ?? (donation ? `#${donation.receipt_no}` : "")}
+          </DialogTitle>
+          <DialogDescription>
+            Change any detail of this record. The receipt number and transaction ID stay the same.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="edit-name">Donor name</Label>
+            <Input
+              id="edit-name"
+              value={form.donor_name}
+              onChange={(e) => setForm((f) => ({ ...f, donor_name: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-phone">Phone</Label>
+            <Input
+              id="edit-phone"
+              value={form.donor_phone}
+              onChange={(e) => setForm((f) => ({ ...f, donor_phone: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-amount">Amount (₹)</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                min="1"
+                value={form.amount}
+                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-date">Date &amp; time</Label>
+              <Input
+                id="edit-date"
+                type="datetime-local"
+                value={form.created_at}
+                onChange={(e) => setForm((f) => ({ ...f, created_at: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label>Lane</Label>
+              <Select value={form.lane} onValueChange={(v) => setForm((f) => ({ ...f, lane: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANES.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Payment mode</Label>
+              <Select value={form.payment_mode} onValueChange={(v) => setForm((f) => ({ ...f, payment_mode: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="online">Online (UPI)</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-upi">UPI reference</Label>
+              <Input
+                id="edit-upi"
+                value={form.upi_ref}
+                onChange={(e) => setForm((f) => ({ ...f, upi_ref: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-note">Note</Label>
+            <Textarea
+              id="edit-note"
+              rows={2}
+              value={form.note}
+              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button disabled={updateMutation.isPending} onClick={() => updateMutation.mutate()}>
+            {updateMutation.isPending ? "Saving…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
