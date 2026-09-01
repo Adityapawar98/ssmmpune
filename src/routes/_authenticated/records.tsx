@@ -65,6 +65,7 @@ function RecordsPage() {
   const [mode, setMode] = useState("all");
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editing, setEditing] = useState<Donation | null>(null);
 
   const { data: donations = [], isLoading } = useQuery({
     queryKey: ["donations"],
@@ -243,7 +244,7 @@ function RecordsPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">{formatDateTime(d.created_at)}</p>
                         <div className="mt-2 flex flex-wrap gap-1">
-                          <RowActions donation={d} settings={settings} />
+                          <RowActions donation={d} settings={settings} onEdit={() => setEditing(d)} />
                         </div>
                       </div>
                     </div>
