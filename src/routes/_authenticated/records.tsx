@@ -335,9 +335,6 @@ function RecordsPage() {
         </AlertDialogContent>
 
       </AlertDialog>
-    </div>
-  );
-}
 
       <EditDonationDialog donation={editing} onClose={() => setEditing(null)} />
     </div>
