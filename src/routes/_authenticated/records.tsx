@@ -297,7 +297,7 @@ function RecordsPage() {
                         <td className="py-2 pr-3">{d.status === "paid" ? "Paid" : "Pending"}</td>
                         <td className="py-2 pr-3 text-right font-medium">{formatINR(Number(d.amount))}</td>
                         <td className="flex gap-1 py-2">
-                          <RowActions donation={d} settings={settings} />
+                          <RowActions donation={d} settings={settings} onEdit={() => setEditing(d)} />
                         </td>
                       </tr>
                     ))}
@@ -339,18 +339,28 @@ function RecordsPage() {
   );
 }
 
+      <EditDonationDialog donation={editing} onClose={() => setEditing(null)} />
+    </div>
+  );
+}
+
 function RowActions({
   donation: d,
   settings,
+  onEdit,
 }: {
   donation: Donation;
   settings: ReceiptSettings | null | undefined;
+  onEdit: () => void;
 }) {
   const canWa = !!settings && !!waPhone(d.donor_phone);
   const label = d.txn_id ?? `#${d.receipt_no}`;
 
   return (
     <>
+      <Button size="sm" variant="ghost" title="Edit record" onClick={onEdit}>
+        <Pencil className="size-4" />
+      </Button>
       <Button
         size="sm"
         variant="ghost"
