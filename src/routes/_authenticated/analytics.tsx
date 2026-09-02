@@ -35,8 +35,7 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 });
 
 function AnalyticsPage() {
-  const { user } = useSessionUser();
-  const { data: isAdmin, isLoading: roleLoading } = useIsAdmin(user?.id);
+  useSessionUser();
   const [range, setRange] = useState<"30" | "90" | "all">("30");
 
 
@@ -96,18 +95,6 @@ function AnalyticsPage() {
     .filter((d) => new Date(d.created_at).toISOString().slice(0, 10) === today)
     .reduce((s, d) => s + Number(d.amount), 0);
   const currentYear = String(new Date().getFullYear());
-
-  if (!roleLoading && !isAdmin) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display text-xl">Admins only</CardTitle>
-          <CardDescription>Collection analytics are available to admin accounts.</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
 
   return (
     <div className="space-y-6">
