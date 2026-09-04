@@ -16,7 +16,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useSessionUser } from "@/hooks/useAuthUser";
+import { useIsAdmin, useSessionUser } from "@/hooks/useAuthUser";
 import { supabase } from "@/integrations/supabase/client";
 
 import { formatINR, LANES, SHORT_LANE } from "@/lib/lanes";
@@ -25,17 +25,18 @@ import type { Donation } from "@/lib/receipt";
 export const Route = createFileRoute("/_authenticated/analytics")({
   head: () => ({
     meta: [
-      { title: "Lane Collections | Ganesh Utsav Tracker" },
-      { name: "description", content: "Bar graph of total donations collected across 11 lanes and the Main Rd." },
-      { property: "og:title", content: "Lane Collections" },
-      { property: "og:description", content: "Compare donation totals across all 12 collection areas." },
+      { title: "Collection Analytics | Ganesh Utsav Tracker" },
+      { name: "description", content: "Review lane collections, daily donations, yearly totals, and the admin net balance." },
+      { property: "og:title", content: "Collection Analytics" },
+      { property: "og:description", content: "Compare donation totals across all 12 collection areas and review the net balance." },
     ],
   }),
   component: AnalyticsPage,
 });
 
 function AnalyticsPage() {
-  useSessionUser();
+  const { user } = useSessionUser();
+  const { data: isAdmin } = useIsAdmin(user?.id);
   const [range, setRange] = useState<"30" | "90" | "all">("30");
 
 
@@ -48,6 +49,16 @@ function AnalyticsPage() {
     },
   });
 
+  const { data: expenses = [] } = useQuery({
+    queryKey: ["expenses"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("expenses").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const chartData = LANES.map((lane) => ({
     lane,
     short: SHORT_LANE[lane] ?? lane,
@@ -56,6 +67,8 @@ function AnalyticsPage() {
   }));
 
   const grand = chartData.reduce((s, d) => s + d.total, 0);
+  const expenseTotal = expenses.reduce((s, expense) => s + Number(expense.amount), 0);
+  const netTotal = grand - expenseTotal;
   const best = chartData.reduce((a, b) => (b.total > a.total ? b : a), chartData[0]!);
 
   const daily = useMemo(() => {
@@ -105,6 +118,8 @@ function AnalyticsPage() {
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Stat label="Total collected" value={formatINR(grand)} />
+        {isAdmin ? <Stat label="Total expenses" value={formatINR(expenseTotal)} /> : null}
+        {isAdmin ? <Stat label="Net total" value={formatINR(netTotal)} /> : null}
         <Stat label="Collected today" value={formatINR(todayTotal)} />
         <Stat label="Receipts issued" value={String(donations.length)} />
         <Stat label="Top area" value={`${best.lane} · ${formatINR(best.total)}`} />
