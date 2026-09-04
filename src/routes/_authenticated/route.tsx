@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Clock, FileText, LogOut, Receipt, Settings, ShieldCheck, UserCheck } from "lucide-react";
+import { BarChart3, Banknote, Clock, FileText, LogOut, Receipt, Settings, ShieldCheck, UserCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +26,7 @@ const NAV = [
   { to: "/analytics", label: "Analytics", icon: BarChart3, adminOnly: false },
   { to: "/settings", label: "Receipt setup", icon: Settings, adminOnly: true },
   { to: "/audit", label: "Audit log", icon: ShieldCheck, adminOnly: true },
+  { to: "/expenses", label: "Expenses", icon: Banknote, adminOnly: true },
   { to: "/requests", label: "Login requests", icon: UserCheck, adminOnly: true },
 ] as const;
 
