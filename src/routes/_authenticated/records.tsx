@@ -211,6 +211,31 @@ function RecordsPage() {
         </Select>
       </div>
 
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="font-display text-xl">Today's collection</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Online (UPI)</p>
+              <p className="mt-1 font-display text-2xl">{formatINR(todayOnlineTotal)}</p>
+              <p className="text-xs text-muted-foreground">{todayOnline.length} receipt{todayOnline.length === 1 ? "" : "s"}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Cash</p>
+              <p className="mt-1 font-display text-2xl">{formatINR(todayCashTotal)}</p>
+              <p className="text-xs text-muted-foreground">{todayCash.length} receipt{todayCash.length === 1 ? "" : "s"}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Total today</p>
+              <p className="mt-1 font-display text-2xl text-primary">{formatINR(todayTotal)}</p>
+              <p className="text-xs text-muted-foreground">{today.length} receipt{today.length === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {isAdmin && selectedVisible.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-4 py-3">
           <p className="mr-auto text-sm font-medium">
@@ -224,6 +249,7 @@ function RecordsPage() {
           </Button>
         </div>
       ) : null}
+
 
       <Card>
         <CardHeader>
