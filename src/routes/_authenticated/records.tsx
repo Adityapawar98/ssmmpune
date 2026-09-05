@@ -99,6 +99,23 @@ function RecordsPage() {
 
   const total = filtered.reduce((s, d) => s + Number(d.amount), 0);
 
+  const today = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    return donations.filter((d) => {
+      const t = new Date(d.created_at);
+      return t >= start && t < end;
+    });
+  }, [donations]);
+
+  const todayOnline = today.filter((d) => d.payment_mode === "online");
+  const todayCash = today.filter((d) => d.payment_mode === "cash");
+  const todayOnlineTotal = todayOnline.reduce((s, d) => s + Number(d.amount), 0);
+  const todayCashTotal = todayCash.reduce((s, d) => s + Number(d.amount), 0);
+  const todayTotal = todayOnlineTotal + todayCashTotal;
+
+
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const removed = donations.filter((d) => ids.includes(d.id));
@@ -194,6 +211,31 @@ function RecordsPage() {
         </Select>
       </div>
 
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="font-display text-xl">Today's collection</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Online (UPI)</p>
+              <p className="mt-1 font-display text-2xl">{formatINR(todayOnlineTotal)}</p>
+              <p className="text-xs text-muted-foreground">{todayOnline.length} receipt{todayOnline.length === 1 ? "" : "s"}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Cash</p>
+              <p className="mt-1 font-display text-2xl">{formatINR(todayCashTotal)}</p>
+              <p className="text-xs text-muted-foreground">{todayCash.length} receipt{todayCash.length === 1 ? "" : "s"}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Total today</p>
+              <p className="mt-1 font-display text-2xl text-primary">{formatINR(todayTotal)}</p>
+              <p className="text-xs text-muted-foreground">{today.length} receipt{today.length === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {isAdmin && selectedVisible.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-4 py-3">
           <p className="mr-auto text-sm font-medium">
@@ -207,6 +249,7 @@ function RecordsPage() {
           </Button>
         </div>
       ) : null}
+
 
       <Card>
         <CardHeader>
