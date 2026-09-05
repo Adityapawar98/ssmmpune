@@ -99,6 +99,15 @@ function RecordsPage() {
 
   const total = filtered.reduce((s, d) => s + Number(d.amount), 0);
 
+  // Re-render at local midnight so "Today's collection" resets even if the page stays open.
+  const [dayKey, setDayKey] = useState(() => new Date().toDateString());
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
+    const timer = window.setTimeout(() => setDayKey(new Date().toDateString()), nextMidnight.getTime() - now.getTime());
+    return () => window.clearTimeout(timer);
+  }, [dayKey]);
+
   const today = useMemo(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -107,7 +116,8 @@ function RecordsPage() {
       const t = new Date(d.created_at);
       return t >= start && t < end;
     });
-  }, [donations]);
+    // dayKey forces recomputation when the calendar day rolls over at midnight
+  }, [donations, dayKey]);
 
   const todayOnline = today.filter((d) => d.payment_mode === "online");
   const todayCash = today.filter((d) => d.payment_mode === "cash");
