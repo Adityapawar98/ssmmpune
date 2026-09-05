@@ -8,6 +8,13 @@
       "when": 1788538133297,
       "tag": "0000_create_admin_expenses",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788585082201,
+      "tag": "0001_scope_donations_to_collectors",
+      "breakpoints": true
     }
   ]
 }
