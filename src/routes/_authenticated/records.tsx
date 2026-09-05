@@ -99,6 +99,23 @@ function RecordsPage() {
 
   const total = filtered.reduce((s, d) => s + Number(d.amount), 0);
 
+  const today = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    return donations.filter((d) => {
+      const t = new Date(d.created_at);
+      return t >= start && t < end;
+    });
+  }, [donations]);
+
+  const todayOnline = today.filter((d) => d.payment_mode === "online");
+  const todayCash = today.filter((d) => d.payment_mode === "cash");
+  const todayOnlineTotal = todayOnline.reduce((s, d) => s + Number(d.amount), 0);
+  const todayCashTotal = todayCash.reduce((s, d) => s + Number(d.amount), 0);
+  const todayTotal = todayOnlineTotal + todayCashTotal;
+
+
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const removed = donations.filter((d) => ids.includes(d.id));
