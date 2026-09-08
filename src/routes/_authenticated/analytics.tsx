@@ -109,6 +109,10 @@ function AnalyticsPage() {
     .reduce((s, d) => s + Number(d.amount), 0);
   const currentYear = String(new Date().getFullYear());
 
+  const onlineTotal = donations.filter((d) => d.payment_mode === "online").reduce((s, d) => s + Number(d.amount), 0);
+  const cashTotal = donations.filter((d) => d.payment_mode === "cash").reduce((s, d) => s + Number(d.amount), 0);
+
+
   return (
     <div className="space-y-6">
       <div>
