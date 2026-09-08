@@ -109,6 +109,10 @@ function AnalyticsPage() {
     .reduce((s, d) => s + Number(d.amount), 0);
   const currentYear = String(new Date().getFullYear());
 
+  const onlineTotal = donations.filter((d) => d.payment_mode === "online").reduce((s, d) => s + Number(d.amount), 0);
+  const cashTotal = donations.filter((d) => d.payment_mode === "cash").reduce((s, d) => s + Number(d.amount), 0);
+
+
   return (
     <div className="space-y-6">
       <div>
@@ -126,6 +130,32 @@ function AnalyticsPage() {
       </div>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-xl">Online vs Cash</CardTitle>
+          <CardDescription>Total donations by payment mode.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Online (UPI)</p>
+              <p className="font-display mt-1 text-2xl">{formatINR(onlineTotal)}</p>
+              <p className="text-xs text-muted-foreground">
+                {donations.filter((d) => d.payment_mode === "online").length} receipts
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Cash</p>
+              <p className="font-display mt-1 text-2xl">{formatINR(cashTotal)}</p>
+              <p className="text-xs text-muted-foreground">
+                {donations.filter((d) => d.payment_mode === "cash").length} receipts
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+
         <CardHeader className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="font-display text-xl">Daily collection</CardTitle>
