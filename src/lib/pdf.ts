@@ -57,7 +57,9 @@ export function downloadLedgerPdf(
 
   let nextY = 38;
   for (const laneName of LANES) {
-    const laneDonations = donations.filter((d) => d.lane === laneName);
+    const laneDonations = donations
+      .filter((d) => d.lane === laneName)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     if (!laneDonations.length) continue;
 
     doc.setFont("helvetica", "bold");
