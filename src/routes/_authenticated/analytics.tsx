@@ -112,6 +112,18 @@ function AnalyticsPage() {
   const onlineTotal = donations.filter((d) => d.payment_mode === "online").reduce((s, d) => s + Number(d.amount), 0);
   const cashTotal = donations.filter((d) => d.payment_mode === "cash").reduce((s, d) => s + Number(d.amount), 0);
 
+  const topDonors = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const d of donations) {
+      totals.set(d.donor_name, (totals.get(d.donor_name) ?? 0) + Number(d.amount));
+    }
+    return [...totals.entries()]
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3);
+  }, [donations]);
+
+
 
   return (
     <div className="space-y-6">
