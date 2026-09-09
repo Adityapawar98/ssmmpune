@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-import { formatDateTime } from "./lanes";
+import { formatDateTime, LANES } from "./lanes";
 import { buildReceiptLines, charWidth, type Donation, type ReceiptSettings } from "./receipt";
 
 /** Single receipt as a narrow, thermal-sized PDF. */
@@ -23,7 +23,7 @@ export function downloadReceiptPdf(donation: Donation, settings: ReceiptSettings
   doc.save(`receipt-${donation.receipt_no}.pdf`);
 }
 
-/** Full ledger with per-lane subtotals and a grand total. */
+/** Full ledger grouped into lane sections with subtotals and a grand total. */
 export function downloadLedgerPdf(
   donations: Donation[],
   settings: ReceiptSettings,
@@ -39,10 +39,10 @@ export function downloadLedgerPdf(
   doc.text(meta.rangeLabel, 14, 27);
   doc.text(`Generated ${formatDateTime(new Date().toISOString())}`, 14, 32);
 
-  autoTable(doc, {
-    startY: 38,
-    head: [["Receipt", "Txn ID", "Date", "Donor", "Phone", "Lane", "Mode", "Status", "UPI Ref", "Amount (Rs.)"]],
-    body: donations.map((d) => [
+  const grand = donations.reduce((sum, d) => sum + Number(d.amount), 0);
+  const tableHead = ["Receipt", "Txn ID", "Date", "Donor", "Phone", "Lane", "Mode", "Status", "UPI Ref", "Amount (Rs.)"];
+  const tableRows = (rows: Donation[]) =>
+    rows.map((d) => [
       `#${d.receipt_no}`,
       d.txn_id ?? "-",
       formatDateTime(d.created_at),
@@ -53,29 +53,48 @@ export function downloadLedgerPdf(
       d.status === "paid" ? "Paid" : "Pending",
       d.upi_ref ?? "-",
       Number(d.amount).toFixed(2),
-    ]),
-    styles: { fontSize: 8, cellPadding: 1.5 },
-    headStyles: { fillColor: [214, 122, 32] },
-    columnStyles: { 9: { halign: "right" } },
-  });
+    ]);
 
-  const laneTotals = new Map<string, number>();
-  for (const d of donations) laneTotals.set(d.lane, (laneTotals.get(d.lane) ?? 0) + Number(d.amount));
-  const grand = donations.reduce((sum, d) => sum + Number(d.amount), 0);
+  let nextY = 38;
+  for (const laneName of LANES) {
+    const laneDonations = donations.filter((d) => d.lane === laneName);
+    if (!laneDonations.length) continue;
 
-  const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(laneName, 14, nextY);
+
+    autoTable(doc, {
+      startY: nextY + 4,
+      head: [tableHead],
+      body: tableRows(laneDonations),
+      foot: [["", "", "", "", "", "", "", "", "Lane subtotal", laneDonations.reduce((sum, d) => sum + Number(d.amount), 0).toFixed(2)]],
+      showHead: "everyPage",
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [214, 122, 32] },
+      footStyles: { fillColor: [250, 235, 210], textColor: [60, 40, 20], fontStyle: "bold" },
+      columnStyles: { 9: { halign: "right" } },
+    });
+
+    nextY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  }
+
+  if (nextY > 270) {
+    doc.addPage();
+    nextY = 18;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Ledger total", 14, nextY);
   autoTable(doc, {
-    startY: afterTable,
-    head: [["Lane", "Donations", "Total (Rs.)"]],
-    body: [...laneTotals.entries()].map(([lane, total]) => [
-      lane,
-      String(donations.filter((d) => d.lane === lane).length),
-      total.toFixed(2),
-    ]),
-    foot: [["Grand total", String(donations.length), grand.toFixed(2)]],
+    startY: nextY + 4,
+    head: [["Description", "Receipts", "Total (Rs.)"]],
+    body: [["All exported lanes", String(donations.length), grand.toFixed(2)]],
     styles: { fontSize: 9, cellPadding: 1.8 },
     headStyles: { fillColor: [214, 122, 32] },
-    footStyles: { fillColor: [60, 40, 20], textColor: 255 },
+    foot: [["Grand total", String(donations.length), grand.toFixed(2)]],
+    footStyles: { fillColor: [60, 40, 20], textColor: 255, fontStyle: "bold" },
     columnStyles: { 2: { halign: "right" } },
   });
 
