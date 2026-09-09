@@ -167,6 +167,30 @@ function AnalyticsPage() {
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-xl">Top donors</CardTitle>
+          <CardDescription>Highest total contributions by donor.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {topDonors.length ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {topDonors.map((donor, idx) => (
+                <div key={donor.name} className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground uppercase">
+                    #{idx + 1} · {donor.name}
+                  </p>
+                  <p className="font-display mt-1 text-2xl">{formatINR(donor.total)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">No donations recorded yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+
 
         <CardHeader className="flex flex-wrap items-start justify-between gap-3">
           <div>
