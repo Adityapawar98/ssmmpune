@@ -12,6 +12,7 @@ export const LANES = [
   "Lane no. 11",
   "Main Rd",
   "Shops",
+  "Politician",
 ] as const;
 
 export type Lane = (typeof LANES)[number];
@@ -30,6 +31,7 @@ export const SHORT_LANE: Record<string, string> = {
   "Lane no. 11": "L11",
   "Main Rd": "Main",
   "Shops": "Shops",
+  "Politician": "Politician",
 };
 
 export function formatINR(value: number): string {
